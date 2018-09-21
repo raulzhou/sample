@@ -8,14 +8,14 @@ class StaticPagesController extends Controller
 {
     //
     public function home(){
-    	return View('static_pages/home');
+    	return view('static_pages/home');
     }
 
     public function help(){
-    	return View('static_pages/help');
+    	return view('static_pages/help');
     }
 
     public function about(){
-    	return View('static_pages/about');
+    	return view('static_pages/about');
     }
 }
