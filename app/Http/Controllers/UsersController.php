@@ -6,13 +6,14 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Models\User;
 use Auth;
+use Mail;
 
 class UsersController extends Controller
 {
     public function __construct(){  
         //指定不需要登录就可访问的方法
         $this->middleware('auth',
-            ['except'=>['index','show','create','store']
+            ['except'=>['index','show','create','store','confirmEmail']
         ]);
         //指定只让未登录用户访问的方法
         $this->middleware('guest',[
@@ -49,9 +50,13 @@ class UsersController extends Controller
             'email'=>$request->email,
             'password'=>bcrypt($request->password)
         ]);
-        Auth::login($user);
-        session()->flash('success', '欢迎，您将在这里开启一段新的旅程~');
-        return redirect()->route('users.show', [$user]);
+        
+        //注册成功后，发送激活账号邮件
+        $this->sendEmailConfirmationTo($user);
+        //Auth::login($user);
+        session()->flash('success', '验证邮件已发送到你的注册邮箱上，请注意查收!');
+        //return redirect()->route('users.show', [$user]);
+        return redirect('/');
     }
 
     //编辑资料页面
@@ -86,4 +91,31 @@ class UsersController extends Controller
         session()->flash('success','删除用户成功');
         return back();
     }
+
+    //注册成功后发激活邮件
+    public function sendEmailConfirmationTo($user){
+        $view = 'emails.confirm';
+        $data = compact('user');
+        $from = '420879586@qq.com';
+        $name = '测试邮件号';
+        $to = $user->email;
+        $subject = "感谢注册 Sample 应用！请确认你的邮箱。";
+
+        Mail::send($view,$data,function($message) use ($from,$name,$to,$subject){
+            $message->from($from, $name)->to($to)->subject($subject);
+        });
+    }
+    
+    //接收用户激活方法
+    public function confirmEmail($token){
+        $user = User::where('activation_token', $token)->firstOrFail();
+        $user->activated = true;
+        $user->activation_token = null;
+        $user->save();
+
+        Auth::login($user);
+        session()->flash('success', '恭喜你，激活成功！');
+        return redirect()->route('users.show', [$user]);
+    }
+
 }
